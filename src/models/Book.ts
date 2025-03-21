@@ -1,5 +1,16 @@
 import { z } from 'zod';
 
+export interface booksFilters {
+  title?: string;
+  author?: string;
+  category?: string;
+}
+
+export interface BooksResponse {
+  books: Book[];
+  totalPages: number;
+}
+
 export interface Book {
   id: number;
   title: string;

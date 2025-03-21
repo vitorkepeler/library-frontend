@@ -1,11 +1,8 @@
 'use client';
 
 import {
-  ColumnDef,
-  ColumnFiltersState,
   flexRender,
   getCoreRowModel,
-  getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
   SortingState,
@@ -14,102 +11,50 @@ import {
 import { Button } from '@/components/ui/button.tsx';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table.tsx';
 import { useState } from 'react';
-import { ArrowUpDown } from 'lucide-react';
 import { Input } from '@/components/ui/input.tsx';
 import { Label } from '@radix-ui/react-dropdown-menu';
-import { Book } from '@/models/Book.ts';
 import Spinner from '@/components/Spinner.tsx';
+import { columns } from '@/components/Columns.tsx';
+import { useBooksQuery } from '@/hooks/useBook.ts';
+import { Loader2 } from 'lucide-react';
 
-export const columns: ColumnDef<Book>[] = [
-  {
-    accessorKey: 'title',
-    header: ({ column }) => {
-      return (
-        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}>
-          Title
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
-  },
-  {
-    accessorKey: 'author',
-    header: ({ column }) => {
-      return (
-        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}>
-          Author
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
-  },
-  {
-    accessorKey: 'category',
-    header: ({ column }) => {
-      return (
-        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}>
-          Category
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
-  },
-  {
-    accessorKey: 'available',
-    header: 'Available',
-    cell: ({ row }) => (
-      <div>
-        {row.getValue('available') ? (
-          <span className="text-primary font-bold">Available</span>
-        ) : (
-          <span className="text-destructive font-bold">Rented</span>
-        )}
-      </div>
-    ),
-  },
-  {
-    header: 'Details',
-    cell: ({ row }) => (
-      <Button variant="outline" onClick={() => (window.location.href = `/book/${row.original.id}`)}>
-        Details
-      </Button>
-    ),
-  },
-];
-
-interface BooksListProps {
-  data: Book[];
-  loading: boolean;
-}
-
-export default function BooksList({ data, loading }: BooksListProps) {
+export default function BooksList() {
+  const [page, setPage] = useState(0);
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [filters, setFilters] = useState({ title: '', author: '', category: '' });
+  const [columnFilters, setColumnFilters] = useState(filters);
+  const booksQuery = useBooksQuery(page, filters);
+
+  const applyFilters = () => {
+    setFilters(columnFilters);
+  };
+
+  const clearFilters = () => {
+    setColumnFilters({ title: '', author: '', category: '' });
+    setFilters({ title: '', author: '', category: '' });
+  };
 
   const table = useReactTable({
     columns,
-    data,
+    data: booksQuery.data?.books ?? [],
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
-    onColumnFiltersChange: setColumnFilters,
-    getFilteredRowModel: getFilteredRowModel(),
     state: {
       sorting,
-      columnFilters,
     },
   });
 
   return (
     <div className="w-2/3">
-      <div className="flex items-center py-4 gap-2">
+      <div className="flex items-end gap-4 py-4">
         <div>
           <Label>Title</Label>
           <Input
             placeholder="Ex: Lord of the Rings"
-            value={(table.getColumn('title')?.getFilterValue() as string) ?? ''}
-            onChange={(event) => table.getColumn('title')?.setFilterValue(event.target.value)}
+            value={columnFilters.title}
+            onChange={(event) => setColumnFilters({ ...columnFilters, title: event.target.value })}
             className="max-w-sm border-border"
           />
         </div>
@@ -117,8 +62,8 @@ export default function BooksList({ data, loading }: BooksListProps) {
           <Label>Author</Label>
           <Input
             placeholder="Ex: Tolkien"
-            value={(table.getColumn('author')?.getFilterValue() as string) ?? ''}
-            onChange={(event) => table.getColumn('author')?.setFilterValue(event.target.value)}
+            value={columnFilters.author}
+            onChange={(event) => setColumnFilters({ ...columnFilters, author: event.target.value })}
             className="max-w-sm border-border"
           />
         </div>
@@ -126,10 +71,16 @@ export default function BooksList({ data, loading }: BooksListProps) {
           <Label>Category</Label>
           <Input
             placeholder="Ex: Fantasy"
-            value={(table.getColumn('category')?.getFilterValue() as string) ?? ''}
-            onChange={(event) => table.getColumn('category')?.setFilterValue(event.target.value)}
+            value={columnFilters.category}
+            onChange={(event) => setColumnFilters({ ...columnFilters, category: event.target.value })}
             className="max-w-sm border-border"
           />
+        </div>
+        <div className="flex flex-row gap-2">
+          <Button onClick={applyFilters}>Filtrar</Button>
+          <Button onClick={clearFilters} variant="outline">
+            Limpar
+          </Button>
         </div>
       </div>
 
@@ -149,7 +100,7 @@ export default function BooksList({ data, loading }: BooksListProps) {
             ))}
           </TableHeader>
           <TableBody>
-            {loading ? (
+            {booksQuery.isLoading ? (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-24 text-center">
                   <Spinner />
@@ -174,11 +125,27 @@ export default function BooksList({ data, loading }: BooksListProps) {
         </Table>
       </div>
       <div className="flex items-center justify-end space-x-2 py-4">
-        <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setPage((old) => Math.max(old - 1, 0))}
+          disabled={page === 0}
+        >
           Previous
         </Button>
-        <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
-          Next
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            setPage((old) => old + 1);
+          }}
+          disabled={
+            (booksQuery.data && booksQuery.data.totalPages - 1 === page) ||
+            booksQuery.isPlaceholderData ||
+            booksQuery.isLoading
+          }
+        >
+          {booksQuery.isPlaceholderData ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Next'}
         </Button>
       </div>
     </div>

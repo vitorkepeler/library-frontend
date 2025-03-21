@@ -59,7 +59,9 @@ const BookDetails = () => {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-56">
-                    <DropdownMenuItem className="cursor-pointer">Edit</DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer" onClick={() => navigate(`/edit/${id}`)}>
+                      Edit
+                    </DropdownMenuItem>
                     <DropdownMenuItem className="cursor-pointer" onClick={() => setOpenDeleteDialog(true)}>
                       Delete
                     </DropdownMenuItem>

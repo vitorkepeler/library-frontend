@@ -1,12 +1,14 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { createBook, deleteBook, getAllBooks, getBook, rentBook } from '@/services/book.service.ts';
-import { bookSchema } from '@/models/Book.ts';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { createBook, deleteBook, getAllBooks, getBook, rentBook, updateBook } from '@/services/book.service.ts';
+import { bookSchema, booksFilters } from '@/models/Book.ts';
 import { z } from 'zod';
+import { useNavigate } from 'react-router-dom';
 
-export function useBooksQuery() {
+export function useBooksQuery(page: number, filters?: booksFilters) {
   return useQuery({
-    queryKey: ['books'],
-    queryFn: getAllBooks,
+    queryKey: ['books', page, filters],
+    queryFn: () => getAllBooks(page, filters),
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -35,11 +37,30 @@ export function useDeleteBookMutation({ onSuccess }: { onSuccess?: () => void })
   });
 }
 
-export function useCreateBookMutation({ onSuccess }: { onSuccess?: () => void }) {
+export function useCreateBookMutation() {
+  const navigate = useNavigate();
+
   return useMutation({
     mutationFn: (book: z.infer<typeof bookSchema>) => {
       return createBook(book);
     },
-    onSuccess,
+    onSuccess: (data) => {
+      navigate('/book/' + data.data.id, { replace: true });
+    },
+  });
+}
+
+export function useUpdateBookMutation() {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ bookId, book }: { bookId: number; book: z.infer<typeof bookSchema> }) => {
+      return updateBook(bookId, book);
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['book', data.data.id] });
+      navigate('/book/' + data.data.id, { replace: true });
+    },
   });
 }
