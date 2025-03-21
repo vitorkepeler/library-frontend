@@ -18,13 +18,13 @@ Feito ✅:
 - Página com detalhes de um livro (a foto está fixa);
 - Botão para alugar/devolver um livro;
 - Ação de exclusão somente quando o livro não estiver alugado.
-
-O que falta ❌:
-
 - Tela para edição de um livro;
-- Feedback para o usuário para requisições POST/PUT/DELETE;
+- Feedback de erro para o usuário (sonner);
 - Tela de login;
 - Rotas protegidas somente para usuários logados (utilizando JWT);
+
+O que faltou ❌:
+
 - Testes unitários;
 - Uso de Docker para deploy do sistema;
 
